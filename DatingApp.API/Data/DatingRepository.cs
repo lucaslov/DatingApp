@@ -25,6 +25,12 @@ namespace DatingApp.API.Data
             _context.Remove(entity);
         }
 
+        public async Task<Like> GetLike(int userId, int recipientId)
+        {
+            return await _context.Likes.FirstOrDefaultAsync(u =>
+                 u.LikerId == userId && u.LikeeId == recipientId);
+        }
+
         public async Task<Photo> GetMainPhotoForUser(int userId)
         {
             var mainPhoto = await _context.Photos.Where(u => u.UserId == userId)
@@ -56,6 +62,18 @@ namespace DatingApp.API.Data
 
             users = users.Where(u => u.Gender == userParameters.Gender);
 
+            if(userParameters.Likers)
+            {
+                var userLikers = await GetUserLikes(userParameters.UserId, userParameters.Likers);
+                users = users.Where(u => userLikers.Contains(u.Id));
+            }
+
+            if(userParameters.Likees)
+            {
+                var userLikees = await GetUserLikes(userParameters.UserId, userParameters.Likers);
+                users = users.Where(u => userLikees.Contains(u.Id));
+            }
+
             if(userParameters.MinAge != 18 || userParameters.MaxAge != 99)
             {
                 var minDateOfBirth = DateTime.Today.AddYears(-userParameters.MaxAge - 1);
@@ -78,6 +96,23 @@ namespace DatingApp.API.Data
             }
 
             return await PagedList<User>.CreateAsync(users, userParameters.PageNumber, userParameters.PageSize);
+        }
+
+        private async Task<IEnumerable<int>> GetUserLikes(int id, bool likers)
+        {
+            var user = await _context.Users
+                .Include(x => x.Likers)
+                .Include(x => x.Likees)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if(likers)
+            {
+                return user.Likers.Where(u => u.LikeeId == id).Select(i => i.LikerId);
+            }
+            else
+            {
+                return user.Likees.Where(u => u.LikerId == id).Select(i => i.LikeeId);
+            }
         }
 
         public async Task<bool> SaveAll()
