@@ -27,7 +27,7 @@ namespace DatingApp.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetUsers(UserParameters userParameters)
+        public async Task<IActionResult> GetUsers([FromQuery]UserParameters userParameters)
         {
             var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
 
